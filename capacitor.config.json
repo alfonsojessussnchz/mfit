@@ -2,15 +2,15 @@
   "appId": "com.alfonsojessussnchz.mfit",
   "appName": "Mfit",
   "webDir": "www",
-  "backgroundColor": "#0e1013",
+  "backgroundColor": "#110e1c",
   "ios": {
     "contentInset": "never",
-    "backgroundColor": "#0e1013",
+    "backgroundColor": "#110e1c",
     "scrollEnabled": true
   },
   "plugins": {
     "LocalNotifications": {
-      "iconColor": "#b6f23c"
+      "iconColor": "#8b5cf6"
     }
   }
 }

@@ -45,6 +45,7 @@
   // ---------- render ----------
   function go(tab) {
     ui.tab = tab;
+    ui.enter = true;
     render();
     window.scrollTo(0, 0);
   }
@@ -53,7 +54,55 @@
     $('#title').textContent = TITLES[ui.tab];
     document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === ui.tab));
     $('#btn-settings').classList.toggle('active', ui.tab === 'settings');
+    view.classList.remove('enter');
     view.innerHTML = VIEWS[ui.tab]();
+    if (ui.enter) { void view.offsetWidth; view.classList.add('enter'); countUp(); }
+    ui.enter = false;
+    ui.justDone = null;
+  }
+
+  // ---------- movimiento ----------
+  const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Números que suben desde 0 al entrar en una pantalla
+  function countUp() {
+    if (reduceMotion()) return;
+    view.querySelectorAll('[data-count]').forEach(el => {
+      const target = +el.dataset.count;
+      if (!(target > 0)) return;
+      const t0 = performance.now(), dur = 900;
+      const step = now => {
+        const k = Math.min(1, (now - t0) / dur);
+        el.textContent = fmtInt(target * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  // Confeti al terminar un entreno
+  function confetti(n = 90) {
+    if (reduceMotion()) return;
+    const cv = document.createElement('canvas');
+    cv.className = 'confetti';
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+    const cols = ['#8b5cf6', '#c050e8', '#f472b6', '#a78bfa', '#ffffff'];
+    const ps = Array.from({ length: n }, () => ({
+      x: innerWidth / 2, y: innerHeight * .35, vx: (Math.random() - .5) * 12, vy: -Math.random() * 12 - 4,
+      s: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: cols[(Math.random() * cols.length) | 0],
+    }));
+    const t0 = performance.now();
+    (function frame(now) {
+      const t = now - t0;
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      ps.forEach(p => {
+        p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, 1 - t / 1800);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore();
+      });
+      if (t < 1800) requestAnimationFrame(frame); else cv.remove();
+    })(t0);
   }
 
   // =====================================================================
@@ -111,8 +160,8 @@
       <div class="row between"><span class="kicker">Esta semana</span><button class="link" data-action="go" data-to="progress">Ver progreso ›</button></div>
       <div class="stats">
         <div><b>${cur.sessions}${goalDays ? `<small>/${goalDays}</small>` : ''}</b><span>entrenos</span></div>
-        <div><b>${cur.sets}</b><span>series ${delta(cur.sets, prev.sets)}</span></div>
-        <div><b>${fmtInt(cur.volume)}</b><span>kg volumen</span></div>
+        <div><b data-count="${cur.sets}">${cur.sets}</b><span>series ${delta(cur.sets, prev.sets)}</span></div>
+        <div><b data-count="${Math.round(cur.volume)}">${fmtInt(cur.volume)}</b><span>kg volumen</span></div>
       </div>
       ${goalDays ? `<div class="progress-bar"><i style="width:${Math.min(100, cur.sessions / goalDays * 100)}%"></i></div>` : ''}
     </section>`;
@@ -123,7 +172,7 @@
       h += `<section class="card">
         <div class="row between"><span class="kicker">Objetivo diario · ${Calc.GOALS[S.profile.goal].name}</span><button class="link" data-action="quick-diary">Diario ›</button></div>
         ${(() => { const t = Store.dayTotals(Store.dayKey()); return `
-        <div class="kcal"><b>${fmtInt(t.k)}</b> / ${fmtInt(n.kcal)} kcal hoy</div>
+        <div class="kcal"><b data-count="${Math.round(t.k)}">${fmtInt(t.k)}</b> / ${fmtInt(n.kcal)} kcal hoy</div>
         ${macroBar('Proteína', 'm-prot', t.p, n.protein)}
         ${macroBar('Carbohidratos', 'm-carb', t.c, n.carbs)}
         ${macroBar('Grasas', 'm-fat', t.f, n.fat)}`; })()}
@@ -189,7 +238,7 @@
         ${warmup(e, X, i, a)}
         <div class="sets">
           <div class="set-row head"><span>Serie</span><span>${X.bw ? 'Lastre kg' : 'kg'}</span><span>Reps</span><span></span></div>
-          ${e.sets.map((s, j) => `<div class="set-row ${s.done ? 'done' : ''}">
+          ${e.sets.map((s, j) => `<div class="set-row ${s.done ? 'done' : ''} ${ui.justDone === i + '-' + j ? 'just' : ''}">
             <span class="set-n">${j + 1}</span>
             <input type="text" inputmode="decimal" data-set="w" data-i="${i}" data-j="${j}" value="${s.w ?? ''}" placeholder="${e.sugg.weight ?? (X.bw ? '0' : 'kg')}" aria-label="Peso serie ${j + 1}">
             <input type="text" inputmode="numeric" data-set="r" data-i="${i}" data-j="${j}" value="${s.r ?? ''}" placeholder="${e.target.repMax}" aria-label="Reps serie ${j + 1}">
@@ -273,6 +322,7 @@
     await Store.saveActive();
     stopRest();
     Native.success();
+    confetti(prs.length ? 140 : 90);
     const sets = exercises.reduce((n, e) => n + e.sets.length, 0);
     const vol = exercises.reduce((n, e) => n + e.sets.reduce((m, s) => m + s.w * s.r, 0), 0);
     toast(`💪 Entreno guardado: ${sets} series · ${fmtInt(vol)} kg${prs.length ? `<br>🏆 Récord en ${prs.map(esc).join(', ')}` : ''}`, 4500);
@@ -280,9 +330,10 @@
   }
 
   // ---------- temporizador de descanso ----------
-  let restTimer = null, restEnd = 0, restName = '';
+  let restTimer = null, restEnd = 0, restName = '', restTotal = 1;
   function startRest(sec, name = '') {
     restEnd = Date.now() + sec * 1000;
+    restTotal = sec * 1000;
     restName = name;
     Native.scheduleRest(sec, name);
     $('#rest').classList.add('show');
@@ -301,7 +352,8 @@
       return;
     }
     el.innerHTML = `<span>Descanso <b>${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</b></span>
-      <span class="row gap"><button class="btn ghost sm" data-action="rest-add">+15 s</button><button class="btn ghost sm" data-action="rest-skip">Saltar</button></span>`;
+      <span class="row gap"><button class="btn ghost sm" data-action="rest-add">+15 s</button><button class="btn ghost sm" data-action="rest-skip">Saltar</button></span>
+      <i class="rest-prog" style="width:${Math.max(0, Math.min(100, (restEnd - Date.now()) / restTotal * 100))}%"></i>`;
   }
   function stopRest() { clearInterval(restTimer); Native.cancelRest(); $('#rest').classList.remove('show'); }
 
@@ -721,7 +773,7 @@
       <p class="small"><b>iPhone (Safari):</b> botón Compartir → «Añadir a pantalla de inicio».<br>
       <b>Android (Chrome):</b> menú ⋮ → «Instalar aplicación» o «Añadir a pantalla de inicio».</p>
     </section>
-    <p class="small muted pad">Mfit · beta 0.3</p>`;
+    <p class="small muted pad">Mfit · beta 0.4</p>`;
   }
 
   const VIEWS = { home: viewHome, train: viewTrain, progress: viewProgress, nutrition: viewNutrition, routine: viewRoutine, settings: viewSettings };
@@ -741,8 +793,14 @@
     'toggle-set': el => {
       const e = S.active.exercises[+el.dataset.i];
       const s = e.sets[+el.dataset.j];
+      if (!s.done && !ex(e.exId).bw && !(num(s.w) > 0) && !(e.sugg.weight > 0)) {
+        toast('Pon el peso de la serie antes de marcarla ✓');
+        document.querySelector(`[data-set=w][data-i="${el.dataset.i}"][data-j="${el.dataset.j}"]`)?.focus();
+        return;
+      }
       s.done = !s.done;
       if (s.done) {
+        ui.justDone = el.dataset.i + '-' + el.dataset.j;
         if (s.r === '' || s.r == null) s.r = e.target.repMax;
         if (s.w === '' || s.w == null) s.w = e.sugg.weight ?? 0;
         Native.tap();
@@ -766,7 +824,7 @@
       if (!confirm('¿Descartar este entreno? No se guardará nada.')) return;
       S.active = null; await Store.saveActive(); stopRest(); go('home');
     },
-    'rest-add': () => { restEnd += 15000; Native.scheduleRest(Math.ceil((restEnd - Date.now()) / 1000), restName); tickRest(); },
+    'rest-add': () => { restEnd += 15000; restTotal += 15000; Native.scheduleRest(Math.ceil((restEnd - Date.now()) / 1000), restName); tickRest(); },
     'rest-skip': () => stopRest(),
 
     'prog-mode': el => { ui.progMode = el.dataset.mode; render(); },
@@ -956,6 +1014,7 @@
       view.innerHTML = `<section class="card"><h2>Error al abrir la base de datos</h2><p class="muted small">${esc(err.message)}</p></section>`;
       return;
     }
+    ui.enter = true;
     render();
     // refrescar el contador de minutos del entreno
     setInterval(() => { if (ui.tab === 'train' && S.active && !document.activeElement?.matches('input')) render(); }, 60000);

@@ -6,6 +6,10 @@
   const view = $('#view');
   const S = Store.state;
 
+  // Medidas de cinta (cintura/cuello/cadera): ocultas por ahora. Poner a true para recuperarlas.
+  const SHOW_MEASURES = false;
+  const nutri = p => Calc.nutrition(SHOW_MEASURES ? p : { ...p, waistCm: null, neckCm: null, hipCm: null });
+
   const ui = { tab: 'home', progMode: 'week', progEx: null, nutMode: 'day', day: null, addMeal: null, pick: null, q: '', panel: null };
 
   const TITLES = { home: 'Mfit', train: 'Entrenar', progress: 'Progreso', nutrition: 'Nutrición', routine: 'Rutina', settings: 'Ajustes' };
@@ -65,7 +69,7 @@
       h += `<section class="card onboarding">
         <h2>Empecemos</h2>
         <ol class="steps">
-          <li class="${ready ? 'done' : ''}"><b>Tu perfil</b> — peso, altura, medidas y objetivo.
+          <li class="${ready ? 'done' : ''}"><b>Tu perfil</b> — peso, altura y objetivo.
             ${ready ? '<span class="pill ok">Hecho</span>' : '<button class="btn sm" data-action="go" data-to="nutrition">Completar</button>'}</li>
           <li class="${S.routine ? 'done' : ''}"><b>Tu rutina</b> — se genera según tu nivel y días disponibles.
             ${S.routine ? '<span class="pill ok">Hecho</span>' : '<button class="btn sm" data-action="go" data-to="routine">Generar</button>'}</li>
@@ -114,7 +118,7 @@
     </section>`;
 
     // Nutrición
-    const n = Calc.nutrition(S.profile);
+    const n = nutri(S.profile);
     if (n) {
       h += `<section class="card">
         <div class="row between"><span class="kicker">Objetivo diario · ${Calc.GOALS[S.profile.goal].name}</span><button class="link" data-action="quick-diary">Diario ›</button></div>
@@ -268,6 +272,7 @@
     S.active = null;
     await Store.saveActive();
     stopRest();
+    Native.success();
     const sets = exercises.reduce((n, e) => n + e.sets.length, 0);
     const vol = exercises.reduce((n, e) => n + e.sets.reduce((m, s) => m + s.w * s.r, 0), 0);
     toast(`💪 Entreno guardado: ${sets} series · ${fmtInt(vol)} kg${prs.length ? `<br>🏆 Récord en ${prs.map(esc).join(', ')}` : ''}`, 4500);
@@ -275,9 +280,11 @@
   }
 
   // ---------- temporizador de descanso ----------
-  let restTimer = null, restEnd = 0;
-  function startRest(sec) {
+  let restTimer = null, restEnd = 0, restName = '';
+  function startRest(sec, name = '') {
     restEnd = Date.now() + sec * 1000;
+    restName = name;
+    Native.scheduleRest(sec, name);
     $('#rest').classList.add('show');
     clearInterval(restTimer);
     tickRest();
@@ -289,14 +296,14 @@
     if (left <= 0) {
       clearInterval(restTimer);
       el.innerHTML = '<span>⏱️ ¡A por la siguiente serie!</span>';
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      setTimeout(stopRest, 2500);
+      Native.success();
+      setTimeout(() => $('#rest').classList.remove('show'), 2500);
       return;
     }
     el.innerHTML = `<span>Descanso <b>${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</b></span>
       <span class="row gap"><button class="btn ghost sm" data-action="rest-add">+15 s</button><button class="btn ghost sm" data-action="rest-skip">Saltar</button></span>`;
   }
-  function stopRest() { clearInterval(restTimer); $('#rest').classList.remove('show'); }
+  function stopRest() { clearInterval(restTimer); Native.cancelRest(); $('#rest').classList.remove('show'); }
 
   // =====================================================================
   // PROGRESO
@@ -383,7 +390,7 @@
       const bf = Calc.navyBodyFat({ sex: S.profile.sex, heightCm: S.profile.heightCm, waistCm: m.waistCm, neckCm: m.neckCm, hipCm: m.hipCm });
       return bf ? { x: new Date(m.date), y: Calc.round(bf, 1), m } : null;
     }).filter(Boolean);
-    h += `<section class="card"><span class="kicker">Medidas y % de grasa</span>
+    if (SHOW_MEASURES) h += `<section class="card"><span class="kicker">Medidas y % de grasa</span>
       <div class="grid${fem ? '3' : '2'}">
         <span class="inp"><input type="text" inputmode="decimal" id="m-waist" placeholder="Cintura" value=""><em>cm</em></span>
         <span class="inp"><input type="text" inputmode="decimal" id="m-neck" placeholder="Cuello" value=""><em>cm</em></span>
@@ -434,7 +441,7 @@
   function viewDiary() {
     const today = Store.dayKey();
     if (!ui.day) ui.day = today;
-    const n = Calc.nutrition(S.profile);
+    const n = nutri(S.profile);
     const t = Store.dayTotals(ui.day);
     const d = new Date(ui.day + 'T12:00');
     const label = ui.day === today ? 'Hoy' : ui.day === Store.dayKey(Date.now() - 864e5) ? 'Ayer' : '';
@@ -550,9 +557,9 @@
         ${field('age', 'Edad', 'años', '25')}
         ${field('heightCm', 'Altura', 'cm', '175')}
         ${field('kg', 'Peso', 'kg', '75')}
-        ${field('waistCm', 'Cintura', 'cm', 'a la altura del ombligo')}
-        ${field('neckCm', 'Cuello', 'cm', 'bajo la nuez')}
-        ${p.sex === 'f' ? field('hipCm', 'Cadera', 'cm', 'parte más ancha') : ''}
+        ${SHOW_MEASURES ? field('waistCm', 'Cintura', 'cm', 'a la altura del ombligo') : ''}
+        ${SHOW_MEASURES ? field('neckCm', 'Cuello', 'cm', 'bajo la nuez') : ''}
+        ${SHOW_MEASURES && p.sex === 'f' ? field('hipCm', 'Cadera', 'cm', 'parte más ancha') : ''}
       </div>
       <label class="field"><span>Actividad</span><select data-profile="activity">
         ${Object.entries(Calc.ACTIVITY).map(([k, a]) => `<option value="${k}" ${p.activity === k ? 'selected' : ''}>${a.name} — ${a.desc}</option>`).join('')}
@@ -562,7 +569,7 @@
       </select></label>
     </section>`;
 
-    const n = Calc.nutrition(p);
+    const n = nutri(p);
     if (!n) return h + `<p class="muted small pad">Rellena edad, altura y peso para ver tus calorías y macros.</p>`;
 
     h += `<section class="card accent">
@@ -714,7 +721,7 @@
       <p class="small"><b>iPhone (Safari):</b> botón Compartir → «Añadir a pantalla de inicio».<br>
       <b>Android (Chrome):</b> menú ⋮ → «Instalar aplicación» o «Añadir a pantalla de inicio».</p>
     </section>
-    <p class="small muted pad">Mfit · beta 0.2</p>`;
+    <p class="small muted pad">Mfit · beta 0.3</p>`;
   }
 
   const VIEWS = { home: viewHome, train: viewTrain, progress: viewProgress, nutrition: viewNutrition, routine: viewRoutine, settings: viewSettings };
@@ -738,7 +745,8 @@
       if (s.done) {
         if (s.r === '' || s.r == null) s.r = e.target.repMax;
         if (s.w === '' || s.w == null) s.w = e.sugg.weight ?? 0;
-        startRest(e.target.rest);
+        Native.tap();
+        startRest(e.target.rest, ex(e.exId).name);
       }
       Store.saveActive();
       render();
@@ -758,7 +766,7 @@
       if (!confirm('¿Descartar este entreno? No se guardará nada.')) return;
       S.active = null; await Store.saveActive(); stopRest(); go('home');
     },
-    'rest-add': () => { restEnd += 15000; tickRest(); },
+    'rest-add': () => { restEnd += 15000; Native.scheduleRest(Math.ceil((restEnd - Date.now()) / 1000), restName); tickRest(); },
     'rest-skip': () => stopRest(),
 
     'prog-mode': el => { ui.progMode = el.dataset.mode; render(); },
@@ -940,6 +948,7 @@
 
   // ---------- arranque ----------
   async function boot() {
+    Native.init();
     try {
       await Store.init();
     } catch (err) {

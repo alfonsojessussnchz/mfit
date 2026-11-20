@@ -48,7 +48,7 @@ const Calc = (() => {
     const goal = GOALS[p.goal] || GOALS.maint;
     const navy = navyBodyFat(p);
     const bf = navy != null && navy > 2 && navy < 60 ? navy : bmiBodyFat(p);
-    const bfMethod = navy != null && navy > 2 && navy < 60 ? 'Método Marina EE. UU. (medidas)' : 'Estimado por IMC (añade cintura y cuello para más precisión)';
+    const bfMethod = navy != null && navy > 2 && navy < 60 ? 'método Marina EE. UU. (medidas)' : 'estimado a partir del IMC, edad y sexo (orientativo)';
     const lbm = p.kg * (1 - bf / 100);
     const bmr = bmrMifflin(p);
     const tdee = bmr * act.f;

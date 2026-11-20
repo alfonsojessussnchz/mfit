@@ -1,6 +1,6 @@
 /* Mfit · service worker: funciona sin conexión (cache de la app). Sube VERSION al publicar cambios. */
-const VERSION = 'mfit-v0.2.0';
-const FILES = ['./', 'index.html', 'css/styles.css', 'js/data.js', 'js/foods.js', 'js/db.js', 'js/calc.js', 'js/store.js', 'js/charts.js', 'js/app.js',
+const VERSION = 'mfit-v0.3.1';
+const FILES = ['./', 'index.html', 'css/styles.css', 'js/data.js', 'js/foods.js', 'js/db.js', 'js/calc.js', 'js/store.js', 'js/charts.js', 'js/native.js', 'js/app.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

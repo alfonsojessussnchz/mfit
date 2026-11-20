@@ -1,0 +1,22 @@
+{
+  "name": "mfit",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Mfit · app de gimnasio, progreso y nutrición",
+  "scripts": {
+    "build": "node scripts/build-www.mjs",
+    "ios": "npm run build && node scripts/ios-setup.mjs && npx cap open ios",
+    "sync": "npm run build && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/local-notifications": "8.3.1",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}

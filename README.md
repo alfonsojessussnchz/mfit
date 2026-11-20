@@ -1,64 +1,95 @@
-# Mfit · beta 0.2
+<div align="center">
 
-App móvil (PWA) de rutina de gimnasio, progreso y nutrición. Sin librerías ni compilación: HTML + CSS + JavaScript.
+<img src="icons/icon-512.png" alt="Mfit" width="120">
 
-## Cómo probarla
+# Mfit
 
-**En el Mac (rápido):** abre `index.html` con Chrome, pulsa `Cmd+Opt+I` → icono de móvil para verla con tamaño de teléfono.
+**Entrena con cabeza, come con números.**
 
-**En el móvil (misma Wi-Fi):**
+App móvil de rutina de gimnasio, progreso y nutrición. Se instala en el iPhone y funciona sin conexión.
+
+![Beta](https://img.shields.io/badge/estado-base%20beta%200.3-b6f23c?style=flat)
+![HTML](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+![Capacitor](https://img.shields.io/badge/Capacitor-119EFF?style=flat&logo=capacitor&logoColor=white)
+![Sin frameworks](https://img.shields.io/badge/frameworks-0-0e1013?style=flat)
+
+</div>
+
+---
+
+> 🧪 **En base beta.** Funciona y se usa a diario, pero de momento es sobre todo para uso propio: puede cambiar cualquier cosa.
+
+## 💪 De qué va esto
+
+Mfit te monta la rutina según el **volumen de entrenamiento** que te toca (no con ejercicios fijos), te dice en cada ejercicio si subir, mantener o bajar peso, y lleva tu nutrición: calorías, macros, % de grasa y diario de comidas.
+
+Está hecha a mano: HTML, CSS y JavaScript, sin compilación. Los datos se guardan en el propio móvil y no salen de ahí.
+
+## ✨ Lo más chulo
+
+- **Rutina por volumen.** Eliges nivel, días y objetivo, y reparte las series semanales por músculo (división Full Body, Torso/Pierna o PPL según los días).
+- **Te dice qué peso poner.** Doble progresión: si haces todas las series al tope del rango, sube; si fallas dos sesiones seguidas, baja un 10 %. Cada ejercicio lleva su ▲ ＝ ▼.
+- **Registro de series en el gimnasio** con última marca, consejos de técnica, series de calentamiento calculadas y temporizador de descanso.
+- **Progreso de verdad.** Resumen semanal y mensual comparado con el periodo anterior, 1RM estimado, gráficas, peso corporal y % de grasa por medidas.
+- **Nutrición completa.** Calorías y macros según tu perfil, diario de comidas con ~60 alimentos y los tuyos propios, y aviso si el ritmo de cambio de peso no cuadra.
+- **App de iPhone con Capacitor.** Vibra al marcar series y te avisa al terminar el descanso aunque tengas el móvil bloqueado.
+- **Funciona sin conexión** y nada sale del móvil: base de datos interna (IndexedDB) con copia de seguridad exportable.
+
+## 🗂️ Estructura
+
+```
+├── index.html            → estructura y barra de pestañas
+├── css/styles.css        → diseño (tema oscuro, mobile first)
+├── js/
+│   ├── data.js           → músculos, ejercicios con técnica, volumen y divisiones
+│   ├── foods.js          → base de alimentos y comidas del día
+│   ├── db.js             → base de datos interna (IndexedDB)
+│   ├── calc.js           → nutrición, progresión, generador y estadísticas
+│   ├── store.js          → estado y guardado
+│   ├── charts.js         → gráficas SVG
+│   ├── native.js         → funciones del iPhone (vibración, avisos)
+│   └── app.js            → pantallas y acciones
+├── scripts/              → build-www.mjs e ios-setup.mjs (app nativa)
+├── capacitor.config.json → configuración de la app de iPhone
+├── sw.js                 → modo sin conexión (sube VERSION al publicar)
+└── manifest.webmanifest  → datos para instalarla como app
+```
+
+## 🛠️ Cómo tocarla
+
+**Verla en local:**
 ```bash
-cd "~/m3 way/Mfit"
+cd ~/"m3 way/Mfit"
 python3 -m http.server 8000
 ```
-Mira la IP del Mac (Ajustes del Sistema → Wi-Fi → Detalles) y abre `http://TU-IP:8000` en el móvil.
+Y abre `http://localhost:8000` en Chrome (`Cmd+Opt+I` → icono de móvil para verla en tamaño teléfono).
 
-**Instalarla como app (con modo sin conexión):** necesita HTTPS. Lo más fácil es subir la carpeta a GitHub Pages
-(o a tu VPS) y desde el móvil: iPhone → Compartir → «Añadir a pantalla de inicio»; Android → ⋮ → «Instalar aplicación».
+**Cambiar el volumen recomendado:** `VOLUME` en `js/data.js`. **La progresión y la nutrición:** `js/calc.js`.
 
-## Qué hace
+## 📱 Ponerla en el iPhone
 
-| Pestaña | Función |
-|---|---|
-| **Inicio** | Próximo día de la rutina con indicación por ejercicio (▲ subir peso, ＝ mantener, ▼ bajar, ★ primera vez), resumen de la semana, calorías y peso. |
-| **Entrenar** | Registro de series (kg × reps), sugerencia de peso, última marca, consejos de técnica y temporizador de descanso y series de calentamiento calculadas para los compuestos. |
-| **Progreso** | Plan de cargas para los próximos entrenos (qué subir/mantener/bajar en cada ejercicio), resumen semanal/mensual con comparación con el periodo anterior, series por semana/mes, 1RM estimado por ejercicio, gráfica de evolución, peso corporal, medidas (cintura/cuello/cadera) con gráfica de % de grasa e historial. |
-| **Nutrición · Diario** | Apunta comidas por día (desayuno, comida, merienda, cena, snacks) con buscador de ~60 alimentos comunes, tus propios alimentos (datos de la etiqueta) y entrada rápida de kcal. Barras de kcal y macros consumidos frente al objetivo, navegación por días y «copiar día anterior». |
-| **Nutrición · Perfil** | Perfil → IMC, % de grasa (método Marina EE. UU. o estimado por IMC), metabolismo basal, mantenimiento, calorías objetivo y macros. Aviso de ajuste según el ritmo de cambio de peso. |
-| **Rutina** | Generador por **volumen semanal** (nivel + días + objetivo) y editor (cambiar ejercicio, series, reps, ordenar, añadir días). |
-| **Ajustes ⚙** | Exportar/importar copia de seguridad (JSON) y borrar datos. |
+**Como web app (sin Xcode):** ábrela desde GitHub Pages en Safari → Compartir → *Añadir a pantalla de inicio*.
 
-## Lógica principal
-
-- **Volumen**: series semanales recomendadas por músculo y nivel en `js/data.js` (`VOLUME`). Cuenta series directas + 0,5 × indirectas.
-- **Generador** (`Calc.generate`): elige la división por días (2-3 Full Body, 4 Torso/Pierna, 5 T/P + PPL, 6 PPL×2),
-  reparte las series de los músculos grandes, descuenta el volumen indirecto a los pequeños y limita las series por sesión según el nivel (18/22/26).
-- **Progresión** (`Calc.suggest`): doble progresión. Todas las series al tope del rango → sube peso; por debajo del mínimo 2 sesiones seguidas → baja un 10 %.
-- **Nutrición**: Mifflin-St Jeor × factor de actividad; definición −20 %, volumen +10 %; proteína 2,2 g/kg (definición) o 1,8 g/kg; grasas ~25 %.
-
-## Datos
-
-Base de datos interna del navegador (**IndexedDB**, `js/db.js`) con almacenes `kv` (perfil, rutina, entreno en curso, alimentos propios), `sessions`, `bodyweights`, `foodlog` y `measures`.
-Al actualizar de versión la base de datos se migra sola sin perder datos.
-Si IndexedDB no está disponible usa localStorage como respaldo. Nada sale del móvil.
-
-## Estructura
-
+**Como app nativa (con Xcode 26+ y Node 22+):**
+```bash
+cd ~/"m3 way/Mfit"
+npm install     # la primera vez
+npm run ios     # prepara la web, crea el proyecto de Xcode, pone el icono y lo abre
 ```
-index.html            estructura y barra de pestañas
-css/styles.css        estilos (tema oscuro, mobile first)
-js/data.js            músculos, ejercicios (con técnica), volumen, divisiones
-js/foods.js           base de alimentos (por 100 g) y comidas del día
-js/db.js              capa de base de datos (IndexedDB)
-js/calc.js            nutrición, progresión, generador, estadísticas
-js/store.js           estado + persistencia
-js/charts.js          gráficas SVG
-js/app.js             pantallas y acciones
-sw.js                 modo sin conexión (sube VERSION al publicar cambios)
-manifest.webmanifest  datos para instalarla como app
-```
+En Xcode elige tu iPhone → *Signing & Capabilities* → *Team* → ▶. Con Apple ID gratis caduca a los 7 días; con la cuenta de desarrollador dura un año. Tras cambiar código: `npm run sync` y ▶.
 
-## Cambios
+## 📝 Cambios
 
-- **0.2** — Diario de comidas, plan de cargas semanal, calentamiento, medidas y % de grasa. BD v2.
-- **0.1** — Primera beta: generador por volumen, registro de entrenos, progresión, progreso, nutrición.
+- **0.3** — App nativa de iPhone con Capacitor: vibración, aviso de fin de descanso e icono.
+- **0.2** — Diario de comidas, plan de cargas, calentamiento, medidas y % de grasa.
+- **0.1** — Primera beta: generador por volumen, registro, progresión y nutrición.
+
+---
+
+<div align="center">
+
+Hecha entre serie y serie en Córdoba 🏋️
+
+</div>
